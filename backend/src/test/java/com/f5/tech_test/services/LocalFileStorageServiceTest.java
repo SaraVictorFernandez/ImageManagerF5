@@ -1,12 +1,11 @@
 package com.f5.tech_test.services;
 
+import com.f5.tech_test.config.TestFileStorageConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.f5.tech_test.services.LocalFileStorageService;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +24,8 @@ class LocalFileStorageServiceTest {
 
     @BeforeEach
     void setUp() {
-        fileStorageService = new LocalFileStorageService(tempDir.toString());
+        TestFileStorageConfig config = new TestFileStorageConfig(tempDir.toString());
+        fileStorageService = new LocalFileStorageService(config);
         testFile = new MockMultipartFile(
             "image",
             "test.jpg",

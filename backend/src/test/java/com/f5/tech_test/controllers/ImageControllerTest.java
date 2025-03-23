@@ -80,23 +80,21 @@ class ImageControllerTest {
     @Test
     void deleteImage_WithExistingImage_ShouldReturnNoContent() throws Exception {
         // Arrange
-        String imageUrl = "http://example.com/images/test.jpg";
+        String filename = "test.jpg";
 
         // Act & Assert
-        mockMvc.perform(delete("/api/images")
-                .param("url", imageUrl))
+        mockMvc.perform(delete("/api/images/{fileName}", filename))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void deleteImage_WithNonExistingImage_ShouldReturnNotFound() throws Exception {
         // Arrange
-        String imageUrl = "http://example.com/images/nonexistent.jpg";
-        doThrow(new ImageNotFoundException("Image not found")).when(imageService).deleteImage(imageUrl);
+        String filename = "nonexistent.jpg";
+        doThrow(new ImageNotFoundException("Image not found")).when(imageService).deleteImage("/uploads/" + filename);
 
         // Act & Assert
-        mockMvc.perform(delete("/api/images")
-                .param("url", imageUrl))
+        mockMvc.perform(delete("/api/images/{fileName}", filename))
                 .andExpect(status().isNotFound());
     }
 
