@@ -114,6 +114,14 @@ DELETE /api/images
   - 404 Not Found: Image not found
   - 500 Internal Server Error: Deletion failed
 
+### Accessing Images
+
+Images can be accessed directly through their URLs. When you upload an image, you'll receive a URL in the format `/uploads/{filename}`. You can access the image by:
+
+1. Using the full URL: `http://localhost:8080/uploads/{filename}`
+2. Using the relative URL: `/uploads/{filename}`
+
+For example, if you uploaded an image and received the URL `/uploads/abc123.jpg`, you can use via `http://localhost:8080/uploads/abc123.jpg`
 
 ### Supported Image Types
 - JPEG
