@@ -36,7 +36,7 @@ public class LocalFileStorageService implements FileStorageService {
         Path targetLocation = this.fileStorageLocation.resolve(newFilename);
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-        return "/uploads/" + newFilename;
+        return newFilename;
     }
 
     @Override
@@ -59,7 +59,7 @@ public class LocalFileStorageService implements FileStorageService {
     public List<String> getAllFiles() {
         try {
             return Files.list(this.fileStorageLocation)
-                    .map(path -> "/uploads/" + path.getFileName().toString())
+                    .map(path -> path.getFileName().toString())
                     .collect(Collectors.toList());
         } catch (IOException e) {
             throw new RuntimeException("Failed to read stored files", e);

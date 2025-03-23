@@ -15,6 +15,9 @@ import com.f5.tech_test.services.ImageService;
 import com.f5.tech_test.controllers.ImageController;
 import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
+import com.f5.tech_test.dto.ImageDTO;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
 
 import java.util.Arrays;
 import java.util.List;
@@ -50,14 +53,18 @@ class ImageControllerTest {
     @Test
     void uploadImage_WithValidImage_ShouldReturnImageUrl() throws Exception {
         // Arrange
-        String expectedUrl = "http://example.com/images/test.jpg";
-        when(imageService.uploadImage(any())).thenReturn(expectedUrl);
+        ImageDTO expectedDTO = new ImageDTO();
+        expectedDTO.setId(1L);
+        expectedDTO.setUrl("http://example.com/images/test.jpg");
+        when(imageService.uploadImage(any(), any(), any())).thenReturn(expectedDTO);
 
         // Act & Assert
         mockMvc.perform(multipart("/api/images")
-                .file(validImage))
+                .file(validImage)
+                .param("title", "Test Title")
+                .param("description", "Test Description"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.url").value(expectedUrl));
+                .andExpect(jsonPath("$.url").value(expectedDTO.getUrl()));
     }
 
     @Test
@@ -69,7 +76,7 @@ class ImageControllerTest {
             MediaType.TEXT_PLAIN_VALUE,
             "test content".getBytes()
         );
-        doThrow(new InvalidImageException("Invalid file type")).when(imageService).uploadImage(any());
+        doThrow(new InvalidImageException("Invalid file type")).when(imageService).uploadImage(any(), any(), any());
 
         // Act & Assert
         mockMvc.perform(multipart("/api/images")
@@ -80,39 +87,69 @@ class ImageControllerTest {
     @Test
     void deleteImage_WithExistingImage_ShouldReturnNoContent() throws Exception {
         // Arrange
-        String filename = "test.jpg";
+        Long imageId = 1L;
 
         // Act & Assert
-        mockMvc.perform(delete("/api/images/{fileName}", filename))
+        mockMvc.perform(delete("/api/images/{id}", imageId))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void deleteImage_WithNonExistingImage_ShouldReturnNotFound() throws Exception {
         // Arrange
-        String filename = "nonexistent.jpg";
-        doThrow(new ImageNotFoundException("Image not found")).when(imageService).deleteImage("/uploads/" + filename);
+        Long imageId = 1L;
+        doThrow(new ImageNotFoundException("Image not found")).when(imageService).deleteImage(imageId);
 
         // Act & Assert
-        mockMvc.perform(delete("/api/images/{fileName}", filename))
+        mockMvc.perform(delete("/api/images/{id}", imageId))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void getAllImages_ShouldReturnListOfImageUrls() throws Exception {
+    void getAllImages_ShouldReturnListOfImageDTOs() throws Exception {
         // Arrange
-        List<String> expectedUrls = Arrays.asList(
-            "http://example.com/images/image1.jpg",
-            "http://example.com/images/image2.jpg"
-        );
-        when(imageService.getAllImages()).thenReturn(expectedUrls);
+        ImageDTO image1 = new ImageDTO();
+        image1.setId(1L);
+        image1.setUrl("http://example.com/images/image1.jpg");
+        ImageDTO image2 = new ImageDTO();
+        image2.setId(2L);
+        image2.setUrl("http://example.com/images/image2.jpg");
+        List<ImageDTO> expectedImages = Arrays.asList(image1, image2);
+        when(imageService.getAllImages()).thenReturn(expectedImages);
 
         // Act & Assert
         mockMvc.perform(get("/api/images"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.urls").isArray())
-                .andExpect(jsonPath("$.urls.length()").value(2))
-                .andExpect(jsonPath("$.urls[0]").value(expectedUrls.get(0)))
-                .andExpect(jsonPath("$.urls[1]").value(expectedUrls.get(1)));
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].url").value(image1.getUrl()))
+                .andExpect(jsonPath("$[1].url").value(image2.getUrl()));
+    }
+
+    @Test
+    void getImageById_ShouldReturnImageDTO() throws Exception {
+        // Arrange
+        Long imageId = 1L;
+        ImageDTO expectedDTO = new ImageDTO();
+        expectedDTO.setId(imageId);
+        expectedDTO.setUrl("http://example.com/images/test.jpg");
+        when(imageService.getImageById(imageId)).thenReturn(expectedDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/images/{id}", imageId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(imageId))
+                .andExpect(jsonPath("$.url").value(expectedDTO.getUrl()));
+    }
+
+    @Test
+    void getImageById_WithNonExistingImage_ShouldThrowException() throws Exception {
+        // Arrange
+        Long imageId = 1L;
+        when(imageService.getImageById(imageId)).thenThrow(new ImageNotFoundException("Image not found"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/images/{id}", imageId))
+                .andExpect(status().isNotFound());
     }
 } 

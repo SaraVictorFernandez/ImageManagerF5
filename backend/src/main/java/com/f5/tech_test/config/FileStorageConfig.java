@@ -10,8 +10,15 @@ public class FileStorageConfig {
     
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
+
+    @Value("${file.base-url:http://localhost:8080/uploads}")
+    private String baseUrl;
     
     public String getUploadDir() {
         return uploadDir;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
     }
 } 

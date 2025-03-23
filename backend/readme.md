@@ -78,14 +78,28 @@ GET /hello/{name}
 ```http
 POST /api/images
 ```
-- Description: Upload an image file
+- Description: Upload an image file with name and description
 - Request: 
   - Content-Type: multipart/form-data
-  - Parameter: `image` (file) - The image file to upload
+  - Parameters:
+    - `image` (file) - The image file to upload
+    - `title` (string, optional) - Title for the image
+    - `description` (string, optional) - Description of the image
 - Response: 
   ```json
   {
-    "url": "/uploads/{filename}"
+    "id": 1,
+    "filename": "abc123.jpg",
+    "originalFilename": "vacation.jpg",
+    "contentType": "image/jpeg",
+    "fileSize": 1048576,
+    "width": 1920,
+    "height": 1080,
+    "title": "My Vacation Photo",
+    "description": "A beautiful sunset at the beach",
+    "uploadDate": "2024-03-23T21:45:30",
+    "lastModifiedDate": "2024-03-23T21:45:30",
+    "url": "http://localhost:8080/uploads/abc123.jpg"
   }
   ```
 - Error Responses:
@@ -95,20 +109,59 @@ POST /api/images
 ```http
 GET /api/images
 ```
-- Description: Get a list of all uploaded images
-- Response: 
+- Description: Get a list of all uploaded images metadata
+- Response: Array of image DTOs
   ```json
-  {
-    "urls": ["/uploads/file1.jpg", "/uploads/file2.png", ...]
-  }
+  [
+    {
+      "id": 1,
+      "filename": "abc123.jpg",
+      "originalFilename": "vacation.jpg",
+      "contentType": "image/jpeg",
+      "fileSize": 1048576,
+      "width": 1920,
+      "height": 1080,
+      "title": "My Vacation Photo",
+      "description": "A beautiful sunset at the beach",
+      "uploadDate": "2024-03-23T21:45:30",
+      "lastModifiedDate": "2024-03-23T21:45:30",
+      "url": "http://localhost:8080/uploads/abc123.jpg"
+    },
+    // ... more images
+  ]
   ```
 
 ```http
-DELETE /api/images
+GET /api/images/{id}
 ```
-- Description: Delete an image by its filename
+- Description: Get a specific image's metadata ID
 - Parameters:
-  - `fileName` (path variable): The filename of the image to delete (e.g., "abc123.jpg")
+  - `id` (path variable): The ID of the image
+- Response: Image DTO (same format as above)
+- Error Responses:
+  - 404 Not Found: Image not found
+
+```http
+PATCH /api/images/{id}
+```
+- Description: Update an image's metadata and/or file
+- Parameters:
+  - `id` (path variable): The ID of the image to update
+  - `image` (file, optional) - New image file to replace the existing one
+  - `title` (string, optional) - New title
+  - `description` (string, optional) - New description
+- Response: Updated image DTO
+- Error Responses:
+  - 404 Not Found: Image not found
+  - 400 Bad Request: Invalid file type
+  - 500 Internal Server Error: Update failed
+
+```http
+DELETE /api/images/{id}
+```
+- Description: Delete an image by its ID
+- Parameters:
+  - `id` (path variable): The ID of the image to delete
 - Response: 204 No Content
 - Error Responses:
   - 404 Not Found: Image not found
@@ -116,14 +169,21 @@ DELETE /api/images
 
 ### Accessing Images
 
-Images can be accessed directly through their URLs. When you upload an image, you'll receive a URL in the format `/uploads/{filename}`. You can access the image by:
-
-1. Using the full URL: `http://localhost:8080/uploads/{filename}`
-2. Using the relative URL: `/uploads/{filename}`
-
-For example, if you uploaded an image and received the URL `/uploads/abc123.jpg`, you can use via `http://localhost:8080/uploads/abc123.jpg`
+Images can be accessed directly through their URLs. When you upload an image, you'll receive the image's metadata including the URL in the response DTO. The URL will be in the format:
+`http://localhost:8080/uploads/{filename}`
 
 ### Supported Image Types
-- JPEG
+- JPEG/JPG
 - PNG
 - GIF
+
+### Image Metadata
+Each image stored in the system includes:
+- Unique identifier
+- Original and stored filenames
+- Content type
+- File size
+- Image dimensions (width and height)
+- Title and description (optional)
+- Upload and last modified dates
+- Direct URL for access
