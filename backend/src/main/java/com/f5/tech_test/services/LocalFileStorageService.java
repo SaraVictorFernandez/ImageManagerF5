@@ -1,6 +1,6 @@
 package com.f5.tech_test.services;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.f5.tech_test.config.FileStorageConfig;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 public class LocalFileStorageService implements FileStorageService {
     private final Path fileStorageLocation;
 
-    public LocalFileStorageService(@Value("${file.upload-dir:./uploads}") String uploadDir) {
-        this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
+    public LocalFileStorageService(FileStorageConfig fileStorageConfig) {
+        this.fileStorageLocation = Paths.get(fileStorageConfig.getUploadDir()).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.fileStorageLocation);
         } catch (IOException ex) {
