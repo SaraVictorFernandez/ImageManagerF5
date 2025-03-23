@@ -2,8 +2,8 @@ package com.f5.tech_test.controllers;
 
 import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
+import com.f5.tech_test.dto.ImageDTO;
 import com.f5.tech_test.services.ImageService;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/images")
 public class ImageController {
+
     private final ImageService imageService;
 
     public ImageController(ImageService imageService) {
@@ -23,22 +24,43 @@ public class ImageController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("image") MultipartFile file) throws IOException {
-        String imageUrl = imageService.uploadImage(file);
-        return ResponseEntity.ok(Map.of("url", imageUrl));
+    public ResponseEntity<ImageDTO> uploadImage(
+        @RequestParam("image") MultipartFile file,
+        @RequestParam(value = "title", required = false) String title,
+        @RequestParam(value = "description", required = false) String description) 
+        throws IOException 
+    {
+    
+        ImageDTO imageDTO = imageService.uploadImage(file, title, description);
+        return ResponseEntity.ok(imageDTO);
     }
 
-    @DeleteMapping("/{fileName}")
-    public ResponseEntity<Void> deleteImage(@PathVariable("fileName") String fileName) {
-        String imageUrl = "/uploads/" + fileName;
-        imageService.deleteImage(imageUrl);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteImage(@PathVariable Long id) throws IOException {
+        imageService.deleteImage(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, List<String>>> getAllImages() {
-        List<String> urls = imageService.getAllImages();
-        return ResponseEntity.ok(Map.of("urls", urls));
+    public ResponseEntity<List<ImageDTO>> getAllImages() {
+        return ResponseEntity.ok(imageService.getAllImages());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ImageDTO> getImageById(@PathVariable Long id) {
+        return ResponseEntity.ok(imageService.getImageById(id));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ImageDTO> updateImage(
+            @PathVariable Long id,
+            @RequestParam(value = "image", required = false) MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "description", required = false) String description) 
+            throws IOException 
+    {
+        ImageDTO updatedImage = imageService.updateImage(id, file, title, description);
+        return ResponseEntity.ok(updatedImage);
     }
 
     @ExceptionHandler(InvalidImageException.class)
@@ -49,5 +71,10 @@ public class ImageController {
     @ExceptionHandler(ImageNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleImageNotFoundException(ImageNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Map<String, String>> handleIOException(IOException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
     }
 } 

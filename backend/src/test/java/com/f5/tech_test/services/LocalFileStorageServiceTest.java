@@ -35,16 +35,15 @@ class LocalFileStorageServiceTest {
     }
 
     @Test
-    void storeFile_ShouldSaveFileAndReturnUrl() throws IOException {
+    void storeFile_ShouldSaveFileAndReturnName() throws IOException {
         // Act
-        String url = fileStorageService.storeFile(testFile);
+        String name = fileStorageService.storeFile(testFile);
 
         // Assert
-        assertNotNull(url);
-        assertTrue(url.startsWith("/uploads/"));
-        assertTrue(url.endsWith(".jpg"));
+        assertNotNull(name);
+        assertTrue(name.endsWith(".jpg"));
 
-        Path savedFile = tempDir.resolve(url.substring("/uploads/".length()));
+        Path savedFile = tempDir.resolve(name);
         assertTrue(Files.exists(savedFile));
         assertEquals("test image content", new String(Files.readAllBytes(savedFile)));
     }
@@ -74,10 +73,10 @@ class LocalFileStorageServiceTest {
     }
 
     @Test
-    void getAllFiles_ShouldReturnListOfFileUrls() throws IOException {
+    void getAllFiles_ShouldReturnListOfFiles() throws IOException {
         // Arrange
-        String url1 = fileStorageService.storeFile(testFile);
-        String url2 = fileStorageService.storeFile(new MockMultipartFile(
+        String name1 = fileStorageService.storeFile(testFile);
+        String name2 = fileStorageService.storeFile(new MockMultipartFile(
             "image2",
             "test2.jpg",
             "image/jpeg",
@@ -85,12 +84,12 @@ class LocalFileStorageServiceTest {
         ));
 
         // Act
-        List<String> urls = fileStorageService.getAllFiles();
+        List<String> names = fileStorageService.getAllFiles();
 
         // Assert
-        assertNotNull(urls);
-        assertEquals(2, urls.size());
-        assertTrue(urls.contains(url1));
-        assertTrue(urls.contains(url2));
+        assertNotNull(names);
+        assertEquals(2, names.size());
+        assertTrue(names.contains(name1));
+        assertTrue(names.contains(name2));
     }
 } 

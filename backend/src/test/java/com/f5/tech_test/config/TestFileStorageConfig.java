@@ -10,6 +10,7 @@ import org.springframework.test.context.TestPropertySource;
 @Primary
 @Profile("test")
 @TestPropertySource(properties = "file.upload-dir=./test-uploads")
+@TestPropertySource(properties = "file.base-url=http://localhost:8081/test-uploads")
 public class TestFileStorageConfig extends FileStorageConfig {
     private final String testUploadDir;
 
