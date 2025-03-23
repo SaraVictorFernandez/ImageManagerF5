@@ -1,7 +1,7 @@
 package com.f5.tech_test.controllers;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.entities.User;
+import com.f5.tech_test.dto.RegisterUserDTO;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
 import com.f5.tech_test.services.UserService;
@@ -22,7 +22,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody User user) {
+    public ResponseEntity<UserDTO> registerUser(@RequestBody RegisterUserDTO user) {
         UserDTO registeredUser = userService.registerUser(user);
         return ResponseEntity.ok(registeredUser);
     }
@@ -43,7 +43,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserDTO userDetails) {
         return ResponseEntity.ok(userService.updateUser(id, userDetails));
     }
 

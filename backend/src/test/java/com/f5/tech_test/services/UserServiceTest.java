@@ -1,6 +1,7 @@
 package com.f5.tech_test.services;
 
 import com.f5.tech_test.dto.UserDTO;
+import com.f5.tech_test.dto.RegisterUserDTO;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -20,9 +23,12 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class UserServiceTest {
 
     @Mock
@@ -31,12 +37,17 @@ class UserServiceTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserService userService;
 
     private User testUser;
     private UserDTO testUserDTO;
+    private RegisterUserDTO testRegisterUserDTO;
     private static final LocalDateTime NOW = LocalDateTime.now();
+    private static final String ENCODED_PASSWORD = "encodedPassword123";
 
     @BeforeEach
     void setUp() {
@@ -52,6 +63,13 @@ class UserServiceTest {
         testUserDTO.setId(1L);
         testUserDTO.setUsername("testuser");
         testUserDTO.setEmail("test@example.com");
+
+        testRegisterUserDTO = new RegisterUserDTO();
+        testRegisterUserDTO.setUsername("testuser");
+        testRegisterUserDTO.setEmail("test@example.com");
+        testRegisterUserDTO.setPassword("password123");
+
+        when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_PASSWORD);
     }
 
     @Test
@@ -59,20 +77,23 @@ class UserServiceTest {
         // Arrange
         when(userRepository.existsByUsername(anyString())).thenReturn(false);
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userMapper.toEntity(any(RegisterUserDTO.class))).thenReturn(testUser);
         when(userRepository.save(any(User.class))).thenReturn(testUser);
         when(userMapper.toDTO(any(User.class))).thenReturn(testUserDTO);
 
         // Act
-        UserDTO result = userService.registerUser(testUser);
+        UserDTO result = userService.registerUser(testRegisterUserDTO);
 
         // Assert
         assertNotNull(result);
         assertEquals(testUserDTO.getId(), result.getId());
         assertEquals(testUserDTO.getUsername(), result.getUsername());
         assertEquals(testUserDTO.getEmail(), result.getEmail());
-        verify(userRepository).existsByUsername(testUser.getUsername());
-        verify(userRepository).existsByEmail(testUser.getEmail());
-        verify(userRepository).save(testUser);
+        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
+        verify(userRepository).existsByEmail(testRegisterUserDTO.getEmail());
+        verify(passwordEncoder).encode(testRegisterUserDTO.getPassword());
+        verify(userMapper).toEntity(testRegisterUserDTO);
+        verify(userRepository).save(any(User.class));
         verify(userMapper).toDTO(testUser);
     }
 
@@ -82,8 +103,8 @@ class UserServiceTest {
         when(userRepository.existsByUsername(anyString())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testUser));
-        verify(userRepository).existsByUsername(testUser.getUsername());
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterUserDTO));
+        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -94,9 +115,9 @@ class UserServiceTest {
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testUser));
-        verify(userRepository).existsByUsername(testUser.getUsername());
-        verify(userRepository).existsByEmail(testUser.getEmail());
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterUserDTO));
+        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
+        verify(userRepository).existsByEmail(testRegisterUserDTO.getEmail());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -127,6 +148,7 @@ class UserServiceTest {
         assertThrows(UserNotFoundException.class, () -> userService.getUserById(1L));
         verify(userRepository).findById(1L);
         verify(userMapper, never()).toDTO(any(User.class));
+        verify(passwordEncoder, never()).encode(anyString());
     }
 
     @Test
@@ -147,22 +169,22 @@ class UserServiceTest {
         assertEquals(testUserDTO.getEmail(), result.get(0).getEmail());
         verify(userRepository).findAll();
         verify(userMapper).toDTO(testUser);
+        verify(passwordEncoder, never()).encode(anyString());
     }
 
     @Test
     void updateUser_WithExistingUser_ShouldReturnUpdatedUserDTO() {
         // Arrange
-        User updatedUser = new User();
-        updatedUser.setUsername("newusername");
-        updatedUser.setEmail("newemail@example.com");
-        updatedUser.setPassword("newpassword");
+        UserDTO updatedUserDTO = new UserDTO();
+        updatedUserDTO.setUsername("newusername");
+        updatedUserDTO.setEmail("newemail@example.com");
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
         when(userMapper.toDTO(any(User.class))).thenReturn(testUserDTO);
 
         // Act
-        UserDTO result = userService.updateUser(1L, updatedUser);
+        UserDTO result = userService.updateUser(1L, updatedUserDTO);
 
         // Assert
         assertNotNull(result);
@@ -180,10 +202,11 @@ class UserServiceTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(UserNotFoundException.class, () -> userService.updateUser(1L, testUser));
+        assertThrows(UserNotFoundException.class, () -> userService.updateUser(1L, testUserDTO));
         verify(userRepository).findById(1L);
         verify(userRepository, never()).save(any(User.class));
         verify(userMapper, never()).toDTO(any(User.class));
+        verify(passwordEncoder, never()).encode(anyString());
     }
 
     @Test
@@ -195,6 +218,7 @@ class UserServiceTest {
         assertDoesNotThrow(() -> userService.deleteUser(1L));
         verify(userRepository).existsById(1L);
         verify(userRepository).deleteById(1L);
+        verify(passwordEncoder, never()).encode(anyString());
     }
 
     @Test
@@ -206,5 +230,6 @@ class UserServiceTest {
         assertThrows(UserNotFoundException.class, () -> userService.deleteUser(1L));
         verify(userRepository).existsById(1L);
         verify(userRepository, never()).deleteById(anyLong());
+        verify(passwordEncoder, never()).encode(anyString());
     }
 } 

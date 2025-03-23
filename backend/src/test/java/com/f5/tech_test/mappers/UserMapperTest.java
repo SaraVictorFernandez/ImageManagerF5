@@ -74,7 +74,7 @@ class UserMapperTest {
     @Test
     void toEntity_WithNullDTO_ShouldReturnNull() {
         // Act
-        User result = userMapper.toEntity(null);
+        User result = userMapper.toEntity((UserDTO) null);
 
         // Assert
         assertNull(result);

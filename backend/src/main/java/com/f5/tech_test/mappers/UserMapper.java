@@ -1,6 +1,7 @@
 package com.f5.tech_test.mappers;
 
 import com.f5.tech_test.dto.UserDTO;
+import com.f5.tech_test.dto.RegisterUserDTO;
 import com.f5.tech_test.entities.User;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,19 @@ public class UserMapper {
         user.setId(dto.getId());
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
+
+        return user;
+    }
+
+    public User toEntity(RegisterUserDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setEmail(dto.getEmail());
+        user.setPassword(dto.getPassword());
 
         return user;
     }

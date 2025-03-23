@@ -1,6 +1,7 @@
 package com.f5.tech_test.controllers;
 
 import com.f5.tech_test.dto.UserDTO;
+import com.f5.tech_test.dto.RegisterUserDTO;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
@@ -59,7 +60,7 @@ class UserControllerTest {
     @Test
     void registerUser_WithValidUser_ShouldReturnUserDTO() throws Exception {
         // Arrange
-        when(userService.registerUser(any(User.class))).thenReturn(testUserDTO);
+        when(userService.registerUser(any(RegisterUserDTO.class))).thenReturn(testUserDTO);
 
         // Act & Assert
         mockMvc.perform(post("/api/users/register")
@@ -75,7 +76,7 @@ class UserControllerTest {
     void registerUser_WithExistingUsername_ShouldReturnConflict() throws Exception {
         // Arrange
         doThrow(new UserAlreadyExistsException("Username already exists"))
-                .when(userService).registerUser(any(User.class));
+                .when(userService).registerUser(any(RegisterUserDTO.class));
 
         // Act & Assert
         mockMvc.perform(post("/api/users/register")
@@ -152,12 +153,12 @@ class UserControllerTest {
     @Test
     void updateUser_WithExistingUser_ShouldReturnUpdatedUserDTO() throws Exception {
         // Arrange
-        when(userService.updateUser(eq(1L), any(User.class))).thenReturn(testUserDTO);
+        when(userService.updateUser(eq(1L), any(UserDTO.class))).thenReturn(testUserDTO);
 
         // Act & Assert
         mockMvc.perform(put("/api/users/1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\"}"))
+                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testUserDTO.getId()))
                 .andExpect(jsonPath("$.username").value(testUserDTO.getUsername()))
@@ -168,12 +169,12 @@ class UserControllerTest {
     void updateUser_WithNonExistingUser_ShouldReturnNotFound() throws Exception {
         // Arrange
         doThrow(new UserNotFoundException("User not found"))
-                .when(userService).updateUser(eq(1L), any(User.class));
+                .when(userService).updateUser(eq(1L), any(UserDTO.class));
 
         // Act & Assert
         mockMvc.perform(put("/api/users/1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\"}"))
+                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("User not found"));
     }

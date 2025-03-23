@@ -1,17 +1,18 @@
 package com.f5.tech_test.services;
 
 import com.f5.tech_test.dto.UserDTO;
+import com.f5.tech_test.dto.RegisterUserDTO;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
 import com.f5.tech_test.mappers.UserMapper;
 import com.f5.tech_test.repositories.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,14 +21,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
-    public UserDTO registerUser(User user) {
+    public UserDTO registerUser(RegisterUserDTO user) {
         // Check if username or email already exists
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
@@ -36,7 +39,15 @@ public class UserService {
             throw new UserAlreadyExistsException("Email already exists");
         }
 
-        User savedUser = userRepository.save(user);
+        // Convert DTO to entity
+        User userEntity = userMapper.toEntity(user);
+        
+        // Encrypt password
+        userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        userEntity.setLastLogin(LocalDateTime.now());
+
+        User savedUser = userRepository.save(userEntity);
         return userMapper.toDTO(savedUser);
     }
 
@@ -62,16 +73,25 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO updateUser(Long id, User userDetails) {
+    public UserDTO updateUser(Long id, UserDTO userDetails) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
 
         // Update user details
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
-        user.setPassword(userDetails.getPassword()); // TODO: hash password
-        user.setLastLogin(LocalDateTime.now());
 
+        User updatedUser = userRepository.save(user);
+        return userMapper.toDTO(updatedUser);
+    }
+
+    @Transactional
+    public UserDTO updatePassword(Long id, String newPassword) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        
         User updatedUser = userRepository.save(user);
         return userMapper.toDTO(updatedUser);
     }
