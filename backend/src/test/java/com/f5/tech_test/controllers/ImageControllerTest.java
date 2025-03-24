@@ -8,16 +8,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoSettings;
 
 import com.f5.tech_test.services.ImageService;
 import com.f5.tech_test.controllers.ImageController;
 import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
 import com.f5.tech_test.dto.ImageDTO;
+import com.f5.tech_test.entities.User;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,16 +33,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ImageControllerTest {
 
     @Mock
     private ImageService imageService;
+
+    @Mock
+    private SecurityContext securityContext;
+
+    @Mock
+    private Authentication authentication;
 
     @InjectMocks
     private ImageController imageController;
 
     private MockMvc mockMvc;
     private MockMultipartFile validImage;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
@@ -48,11 +61,21 @@ class ImageControllerTest {
             MediaType.IMAGE_JPEG_VALUE,
             "test image content".getBytes()
         );
+
+        testUser = new User();
+        testUser.setId(1L);
+    }
+
+    private void setupSecurityContext() {
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(testUser);
     }
 
     @Test
     void uploadImage_WithValidImage_ShouldReturnImageUrl() throws Exception {
         // Arrange
+        setupSecurityContext();
         ImageDTO expectedDTO = new ImageDTO();
         expectedDTO.setId(1L);
         expectedDTO.setUrl("http://example.com/images/test.jpg");
@@ -70,6 +93,7 @@ class ImageControllerTest {
     @Test
     void uploadImage_WithInvalidFile_ShouldReturnBadRequest() throws Exception {
         // Arrange
+        setupSecurityContext();
         MockMultipartFile invalidFile = new MockMultipartFile(
             "image",
             "test.txt",
@@ -85,8 +109,9 @@ class ImageControllerTest {
     }
 
     @Test
-    void deleteImage_WithExistingImage_ShouldReturnNoContent() throws Exception {
+    void deleteImage_WithOwnImage_ShouldReturnNoContent() throws Exception {
         // Arrange
+        setupSecurityContext();
         Long imageId = 1L;
 
         // Act & Assert
@@ -95,8 +120,21 @@ class ImageControllerTest {
     }
 
     @Test
+    void deleteImage_WithOtherUserImage_ShouldReturnForbidden() throws Exception {
+        // Arrange
+        setupSecurityContext();
+        Long imageId = 1L;
+        doThrow(new IllegalStateException("You can only delete your own images")).when(imageService).deleteImage(imageId);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/images/{id}", imageId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void deleteImage_WithNonExistingImage_ShouldReturnNotFound() throws Exception {
         // Arrange
+        setupSecurityContext();
         Long imageId = 1L;
         doThrow(new ImageNotFoundException("Image not found")).when(imageService).deleteImage(imageId);
 
