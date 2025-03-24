@@ -8,10 +8,15 @@ import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
 import com.f5.tech_test.mappers.ImageMapper;
 import com.f5.tech_test.repositories.ImageRepository;
+import com.f5.tech_test.repositories.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -36,15 +41,18 @@ public class ImageService {
     private final ImageRepository imageRepository;
     private final ImageMapper imageMapper;
     private final FileStorageConfig fileStorageConfig;
+    private final UserRepository userRepository;
 
     public ImageService(FileStorageService fileStorageService,
                        ImageRepository imageRepository,
                        ImageMapper imageMapper,
-                       FileStorageConfig fileStorageConfig) {
+                       FileStorageConfig fileStorageConfig,
+                       UserRepository userRepository) {
         this.fileStorageService = fileStorageService;
         this.imageRepository = imageRepository;
         this.imageMapper = imageMapper;
         this.fileStorageConfig = fileStorageConfig;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -52,7 +60,7 @@ public class ImageService {
         validateImage(file);
         
         // Get the current authenticated user
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = getCurrentUser().orElseThrow();
         
         // Save the file
         String filename = fileStorageService.storeFile(file);
@@ -84,7 +92,7 @@ public class ImageService {
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
         
         // Check if the current user owns the image
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = getCurrentUser().orElseThrow();
         if (!image.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalStateException("You can only delete your own images");
         }
@@ -95,7 +103,9 @@ public class ImageService {
 
     @Transactional(readOnly = true)
     public List<ImageDTO> getAllImages() {
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        // Get the current authenticated user
+        User currentUser = getCurrentUser().orElseThrow();
+        
         List<Image> images = imageRepository.findByUser(currentUser);
         return images.stream()
                 .map(image -> imageMapper.toDTO(image, fileStorageConfig.getBaseUrl()))
@@ -104,7 +114,7 @@ public class ImageService {
 
     @Transactional(readOnly = true)
     public ImageDTO getImageById(Long id) throws ImageNotFoundException, IllegalStateException {
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = getCurrentUser().orElseThrow();
         Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
                 
@@ -121,7 +131,7 @@ public class ImageService {
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
         
         // Check if the current user owns the image
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = getCurrentUser().orElseThrow();
         if (!image.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalStateException("You can only update your own images");
         }
@@ -174,6 +184,12 @@ public class ImageService {
         } catch (Exception e) {
             throw new InvalidImageException("Failed to extract image dimensions");
         }
+    }
+
+    private Optional<User> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        return userRepository.findByUsername(username);
     }
     
 } 

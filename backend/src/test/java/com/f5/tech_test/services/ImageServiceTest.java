@@ -8,8 +8,13 @@ import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
 import com.f5.tech_test.mappers.ImageMapper;
 import com.f5.tech_test.repositories.ImageRepository;
+import com.f5.tech_test.repositories.UserRepository;
 import com.f5.tech_test.services.ImageService;
 import com.f5.tech_test.services.FileStorageService;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +62,9 @@ class ImageServiceTest {
 
     @Mock
     private FileStorageConfig fileStorageConfig;
+
+    @Mock
+    private UserRepository userRepository;
 
     @Mock
     private SecurityContext securityContext;
@@ -125,10 +133,18 @@ class ImageServiceTest {
 
         when(fileStorageConfig.getBaseUrl()).thenReturn("http://localhost:8080/uploads");
         
-        // Setup SecurityContext mock
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(testUser);
+        // Setup SecurityContext mock with UserDetails
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(testUser.getUsername())
+            .password("password")
+            .roles("USER")
+            .build();
+        
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        
+        // Mock the userRepository to return our test user
+        when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
     }
 
     @Test

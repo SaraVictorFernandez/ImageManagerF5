@@ -36,6 +36,12 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserByUsername(username));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserDTO> getUser(Authentication authentication){
+        return ResponseEntity.ok(userService.getUserByUsername(authentication.getName()));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("authentication.principal.username == @userService.getUserById(#id).username")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserDTO userDetails) {
