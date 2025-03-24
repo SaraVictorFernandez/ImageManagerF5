@@ -9,7 +9,8 @@ A Spring Boot REST API service that handles image upload functionality, with pla
 - ✅ Backend initialization with Spring Boot
 - ✅ Basic image upload functionality
 - ✅ Image metadata
-- 🔄 User Authentication (in progress)
+- ✅ Implement JWT token generation and validation
+- 🔄 User Authentication (in progress) - Add authorization to existing endpoints
 - 📝 React frontend (planned)
 
 ## Prerequisites
