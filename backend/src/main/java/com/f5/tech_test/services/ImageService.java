@@ -79,7 +79,7 @@ public class ImageService {
     }
 
     @Transactional
-    public void deleteImage(Long id) throws IOException {
+    public void deleteImage(Long id) throws IOException, ImageNotFoundException {
         Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
         
@@ -103,10 +103,16 @@ public class ImageService {
     }
 
     @Transactional(readOnly = true)
-    public ImageDTO getImageById(Long id) {
-        return imageRepository.findById(id)
-                .map(image -> imageMapper.toDTO(image, fileStorageConfig.getBaseUrl()))
+    public ImageDTO getImageById(Long id) throws ImageNotFoundException, IllegalStateException {
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
+                
+        if (!image.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("You can only access your own images");
+        }
+        
+        return imageMapper.toDTO(image, fileStorageConfig.getBaseUrl());
     }
 
     @Transactional

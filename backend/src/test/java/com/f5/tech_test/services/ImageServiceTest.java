@@ -240,7 +240,7 @@ class ImageServiceTest {
     }
 
     @Test
-    void getImageById_ShouldReturnImageDTO() {
+    void getImageById_WithOwnImage_ShouldReturnImageDTO() {
         // Arrange
         Long imageId = 1L;
         when(imageRepository.findById(imageId)).thenReturn(Optional.of(testImage));
@@ -258,13 +258,18 @@ class ImageServiceTest {
     }
 
     @Test
-    void getImageById_WithNonExistingImage_ShouldThrowException() {
+    void getImageById_WithOtherUserImage_ShouldThrowException() {
         // Arrange
         Long imageId = 1L;
-        when(imageRepository.findById(imageId)).thenReturn(Optional.empty());
+        testImage.setUser(otherUser);
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(testImage));
 
         // Act & Assert
-        assertThrows(ImageNotFoundException.class, () -> imageService.getImageById(imageId));
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            imageService.getImageById(imageId);
+        });
+        assertEquals("You can only access your own images", exception.getMessage());
+        verify(imageRepository).findById(anyLong());
         verify(imageMapper, never()).toDTO(any(), any());
     }
 

@@ -62,6 +62,8 @@ public class ImageController {
             return ResponseEntity.ok(image);
         } catch (ImageNotFoundException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
 
