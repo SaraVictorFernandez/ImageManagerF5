@@ -26,6 +26,7 @@ interface ImageState {
   fetchImages: (token: string) => Promise<void>
   uploadImage: (file: File, title: string, token: string) => Promise<void>
   deleteImage: (id: number, token: string) => Promise<void>
+  updateImage: (id: number, file: File | null, title: string | null, token: string) => Promise<void>
   setSelectedImage: (image: Image | null) => void
   clearError: () => void
 }
@@ -99,6 +100,32 @@ export const useImageStore = create<ImageState>()(
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to delete image',
+            isLoading: false
+          })
+        }
+      },
+
+      updateImage: async (id: number, file: File | null, title: string | null, token: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const formData = new FormData()
+          if (file) formData.append('image', file)
+          if (title) formData.append('title', title)
+          
+          const response = await fetch(`${API_BASE_URL}/api/images/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          })
+          if (!response.ok) throw new Error('Failed to update image')
+          
+          // Refresh images after update
+          await get().fetchImages(token)
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : 'Failed to update image',
             isLoading: false
           })
         }
