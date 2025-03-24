@@ -36,19 +36,35 @@ public class ImageController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long id) throws IOException {
-        imageService.deleteImage(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> deleteImage(@PathVariable Long id) {
+        try {
+            imageService.deleteImage(id);
+            return ResponseEntity.noContent().build();
+        } catch (ImageNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping
     public ResponseEntity<List<ImageDTO>> getAllImages() {
-        return ResponseEntity.ok(imageService.getAllImages());
+        List<ImageDTO> images = imageService.getAllImages();
+        return ResponseEntity.ok(images);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ImageDTO> getImageById(@PathVariable Long id) {
-        return ResponseEntity.ok(imageService.getImageById(id));
+        try {
+            ImageDTO image = imageService.getImageById(id);
+            return ResponseEntity.ok(image);
+        } catch (ImageNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
 
     @PatchMapping("/{id}")

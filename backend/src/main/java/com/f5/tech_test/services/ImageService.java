@@ -3,10 +3,12 @@ package com.f5.tech_test.services;
 import com.f5.tech_test.config.FileStorageConfig;
 import com.f5.tech_test.dto.ImageDTO;
 import com.f5.tech_test.entities.Image;
+import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
 import com.f5.tech_test.mappers.ImageMapper;
 import com.f5.tech_test.repositories.ImageRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,6 +50,10 @@ public class ImageService {
     @Transactional
     public ImageDTO uploadImage(MultipartFile file, String title, String description) throws IOException, InvalidImageException {
         validateImage(file);
+        
+        // Get the current authenticated user
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
         // Save the file
         String filename = fileStorageService.storeFile(file);
 
@@ -59,6 +65,7 @@ public class ImageService {
         image.setFileSize(file.getSize());
         image.setTitle(title);
         image.setDescription(description);
+        image.setUser(currentUser);
 
         // Image dimension extraction
         try {
@@ -72,9 +79,15 @@ public class ImageService {
     }
 
     @Transactional
-    public void deleteImage(Long id) throws IOException {
+    public void deleteImage(Long id) throws IOException, ImageNotFoundException {
         Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
+        
+        // Check if the current user owns the image
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!image.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("You can only delete your own images");
+        }
         
         fileStorageService.deleteFile(image.getFilename());
         imageRepository.delete(image);
@@ -82,16 +95,24 @@ public class ImageService {
 
     @Transactional(readOnly = true)
     public List<ImageDTO> getAllImages() {
-        return imageRepository.findAll().stream()
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        List<Image> images = imageRepository.findByUser(currentUser);
+        return images.stream()
                 .map(image -> imageMapper.toDTO(image, fileStorageConfig.getBaseUrl()))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public ImageDTO getImageById(Long id) {
-        return imageRepository.findById(id)
-                .map(image -> imageMapper.toDTO(image, fileStorageConfig.getBaseUrl()))
+    public ImageDTO getImageById(Long id) throws ImageNotFoundException, IllegalStateException {
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
+                
+        if (!image.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("You can only access your own images");
+        }
+        
+        return imageMapper.toDTO(image, fileStorageConfig.getBaseUrl());
     }
 
     @Transactional
@@ -99,6 +120,11 @@ public class ImageService {
         Image image = imageRepository.findById(id)
                 .orElseThrow(() -> new ImageNotFoundException("Image not found with id: " + id));
         
+        // Check if the current user owns the image
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!image.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("You can only update your own images");
+        }
         
         String oldImageName = null;
         

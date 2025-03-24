@@ -3,6 +3,7 @@ package com.f5.tech_test.services;
 import com.f5.tech_test.config.FileStorageConfig;
 import com.f5.tech_test.dto.ImageDTO;
 import com.f5.tech_test.entities.Image;
+import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.ImageNotFoundException;
 import com.f5.tech_test.exceptions.InvalidImageException;
 import com.f5.tech_test.mappers.ImageMapper;
@@ -23,10 +24,14 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoSettings;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +58,12 @@ class ImageServiceTest {
     @Mock
     private FileStorageConfig fileStorageConfig;
 
+    @Mock
+    private SecurityContext securityContext;
+
+    @Mock
+    private Authentication authentication;
+
     @InjectMocks
     private ImageService imageService;
 
@@ -60,6 +71,8 @@ class ImageServiceTest {
     private MockMultipartFile invalidFile;
     private Image testImage;
     private ImageDTO testImageDTO;
+    private User testUser;
+    private User otherUser;
     private static final Logger logger = LoggerFactory.getLogger(ImageServiceTest.class);
 
     @BeforeEach
@@ -78,6 +91,14 @@ class ImageServiceTest {
             "test content".getBytes()
         );
 
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("testuser");
+
+        otherUser = new User();
+        otherUser.setId(2L);
+        otherUser.setUsername("otheruser");
+
         testImage = new Image();
         testImage.setId(1L);
         testImage.setFilename("test.jpg");
@@ -88,6 +109,7 @@ class ImageServiceTest {
         testImage.setDescription("Test Description");
         testImage.setUploadDate(LocalDateTime.now());
         testImage.setLastModifiedDate(LocalDateTime.now());
+        testImage.setUser(testUser);
 
         testImageDTO = new ImageDTO();
         testImageDTO.setId(1L);
@@ -102,6 +124,11 @@ class ImageServiceTest {
         testImageDTO.setUrl("http://localhost:8080/uploads/test.jpg");
 
         when(fileStorageConfig.getBaseUrl()).thenReturn("http://localhost:8080/uploads");
+        
+        // Setup SecurityContext mock
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(testUser);
     }
 
     @Test
@@ -138,7 +165,7 @@ class ImageServiceTest {
     }
 
     @Test
-    void deleteImage_WithExistingImage_ShouldDeleteSuccessfully() throws IOException {
+    void deleteImage_WithOwnImage_ShouldDeleteSuccessfully() throws IOException {
         // Arrange
         Long imageId = 1L;
         when(imageRepository.findById(anyLong())).thenReturn(Optional.of(testImage));
@@ -147,6 +174,23 @@ class ImageServiceTest {
         assertDoesNotThrow(() -> imageService.deleteImage(imageId));
         verify(fileStorageService).deleteFile(testImage.getFilename());
         verify(imageRepository).delete(testImage);
+    }
+
+    @Test
+    void deleteImage_WithOtherUserImage_ShouldThrowException() throws IOException {
+        // Arrange
+        Long imageId = 1L;
+        Image otherUserImage = new Image();
+        otherUserImage.setId(1L);
+        otherUserImage.setUser(otherUser);
+        when(imageRepository.findById(anyLong())).thenReturn(Optional.of(otherUserImage));
+        
+        // Act & Assert
+        IllegalStateException exception = assertThrows(IllegalStateException.class, 
+            () -> imageService.deleteImage(imageId));
+        assertEquals("You can only delete your own images", exception.getMessage());
+        verify(fileStorageService, never()).deleteFile(anyString());
+        verify(imageRepository, never()).delete(any(Image.class));
     }
 
     @Test
@@ -162,10 +206,10 @@ class ImageServiceTest {
     }
 
     @Test
-    void getAllImages_ShouldReturnListOfImageDTOs() {
+    void getAllImages_ShouldReturnOnlyUserImages() {
         // Arrange
-        List<Image> images = Arrays.asList(testImage);
-        when(imageRepository.findAll()).thenReturn(images);
+        List<Image> userImages = Arrays.asList(testImage);
+        when(imageRepository.findByUser(testUser)).thenReturn(userImages);
         when(imageMapper.toDTO(any(Image.class), anyString())).thenReturn(testImageDTO);
 
         // Act
@@ -176,12 +220,27 @@ class ImageServiceTest {
         assertEquals(1, result.size());
         assertEquals(testImageDTO.getId(), result.get(0).getId());
         assertEquals(testImageDTO.getUrl(), result.get(0).getUrl());
-        verify(imageRepository).findAll();
+        verify(imageRepository).findByUser(testUser);
         verify(imageMapper).toDTO(any(Image.class), anyString());
     }
 
     @Test
-    void getImageById_ShouldReturnImageDTO() {
+    void getAllImages_WithNoImages_ShouldReturnEmptyList() {
+        // Arrange
+        when(imageRepository.findByUser(testUser)).thenReturn(Collections.emptyList());
+
+        // Act
+        List<ImageDTO> result = imageService.getAllImages();
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(imageRepository).findByUser(testUser);
+        verify(imageMapper, never()).toDTO(any(), any());
+    }
+
+    @Test
+    void getImageById_WithOwnImage_ShouldReturnImageDTO() {
         // Arrange
         Long imageId = 1L;
         when(imageRepository.findById(imageId)).thenReturn(Optional.of(testImage));
@@ -199,13 +258,53 @@ class ImageServiceTest {
     }
 
     @Test
-    void getImageById_WithNonExistingImage_ShouldThrowException() {
+    void getImageById_WithOtherUserImage_ShouldThrowException() {
         // Arrange
         Long imageId = 1L;
-        when(imageRepository.findById(imageId)).thenReturn(Optional.empty());
+        testImage.setUser(otherUser);
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(testImage));
 
         // Act & Assert
-        assertThrows(ImageNotFoundException.class, () -> imageService.getImageById(imageId));
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            imageService.getImageById(imageId);
+        });
+        assertEquals("You can only access your own images", exception.getMessage());
+        verify(imageRepository).findById(anyLong());
         verify(imageMapper, never()).toDTO(any(), any());
+    }
+
+    @Test
+    void updateImage_WithOwnImage_ShouldUpdateSuccessfully() throws IOException {
+        // Arrange
+        Long imageId = 1L;
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(testImage));
+        when(imageRepository.save(any(Image.class))).thenReturn(testImage);
+        when(imageMapper.toDTO(any(Image.class), anyString())).thenReturn(testImageDTO);
+
+        // Act
+        ImageDTO result = imageService.updateImage(imageId, null, "New Title", "New Description");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(testImageDTO.getId(), result.getId());
+        assertEquals(testImageDTO.getTitle(), result.getTitle());
+        assertEquals(testImageDTO.getDescription(), result.getDescription());
+        verify(imageRepository).save(any(Image.class));
+    }
+
+    @Test
+    void updateImage_WithOtherUserImage_ShouldThrowException() throws IOException {
+        // Arrange
+        Long imageId = 1L;
+        Image otherUserImage = new Image();
+        otherUserImage.setId(1L);
+        otherUserImage.setUser(otherUser);
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(otherUserImage));
+
+        // Act & Assert
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+            () -> imageService.updateImage(imageId, null, "New Title", "New Description"));
+        assertEquals("You can only update your own images", exception.getMessage());
+        verify(imageRepository, never()).save(any(Image.class));
     }
 } 
