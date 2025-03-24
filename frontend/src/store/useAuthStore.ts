@@ -5,7 +5,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 interface User {
   id: string
-  email: string
   name: string
 }
 
@@ -30,13 +29,13 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email: string, password: string) => {
+      login: async (username: string, password: string) => {
         set({ isLoading: true, error: null })
         try {
           const response = await fetch(`${API_BASE_URL}/api/users/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ username, password }),
           })
 
           if (!response.ok) {
@@ -45,7 +44,10 @@ export const useAuthStore = create<AuthState>()(
 
           const data = await response.json()
           set({
-            user: data.user,
+            user: {
+              id: data.userId,
+              name: username,
+            },
             token: data.token,
             isAuthenticated: true,
             isLoading: false,
