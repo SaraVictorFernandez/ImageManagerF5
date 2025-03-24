@@ -43,9 +43,19 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const data = await response.json()
+
+          const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${data.token}` },
+          })
+  
+          if (!userResponse.ok) {
+            throw new Error('Failed to fetch user')
+          }
+  
+          const userData = await userResponse.json();
           set({
             user: {
-              id: data.userId,
+              id: userData.id,
               name: username,
             },
             token: data.token,
