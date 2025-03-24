@@ -95,7 +95,9 @@ public class ImageService {
 
     @Transactional(readOnly = true)
     public List<ImageDTO> getAllImages() {
-        return imageRepository.findAll().stream()
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        List<Image> images = imageRepository.findByUser(currentUser);
+        return images.stream()
                 .map(image -> imageMapper.toDTO(image, fileStorageConfig.getBaseUrl()))
                 .collect(Collectors.toList());
     }

@@ -31,6 +31,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -205,10 +206,10 @@ class ImageServiceTest {
     }
 
     @Test
-    void getAllImages_ShouldReturnListOfImageDTOs() {
+    void getAllImages_ShouldReturnOnlyUserImages() {
         // Arrange
-        List<Image> images = Arrays.asList(testImage);
-        when(imageRepository.findAll()).thenReturn(images);
+        List<Image> userImages = Arrays.asList(testImage);
+        when(imageRepository.findByUser(testUser)).thenReturn(userImages);
         when(imageMapper.toDTO(any(Image.class), anyString())).thenReturn(testImageDTO);
 
         // Act
@@ -219,8 +220,23 @@ class ImageServiceTest {
         assertEquals(1, result.size());
         assertEquals(testImageDTO.getId(), result.get(0).getId());
         assertEquals(testImageDTO.getUrl(), result.get(0).getUrl());
-        verify(imageRepository).findAll();
+        verify(imageRepository).findByUser(testUser);
         verify(imageMapper).toDTO(any(Image.class), anyString());
+    }
+
+    @Test
+    void getAllImages_WithNoImages_ShouldReturnEmptyList() {
+        // Arrange
+        when(imageRepository.findByUser(testUser)).thenReturn(Collections.emptyList());
+
+        // Act
+        List<ImageDTO> result = imageService.getAllImages();
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(imageRepository).findByUser(testUser);
+        verify(imageMapper, never()).toDTO(any(), any());
     }
 
     @Test
