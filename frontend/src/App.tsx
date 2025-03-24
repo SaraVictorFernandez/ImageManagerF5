@@ -6,7 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 function App() {
   return (
     <Router>
-      <div>
+      <div >
         <Routes>
           <Route path="/login" element={<AuthForm />} />
           <Route path="/dashboard" element={<Dashboard />} />
