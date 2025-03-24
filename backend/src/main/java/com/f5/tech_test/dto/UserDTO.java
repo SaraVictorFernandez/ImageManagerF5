@@ -1,7 +1,5 @@
 package com.f5.tech_test.dto;
 
-import java.time.LocalDateTime;
-
 public class UserDTO {
     private Long id;
     private String username;

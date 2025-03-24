@@ -1,8 +1,6 @@
 package com.f5.tech_test.controllers;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.dto.RegisterUserDTO;
-import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
 import com.f5.tech_test.services.UserService;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +17,6 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody RegisterUserDTO user) {
-        UserDTO registeredUser = userService.registerUser(user);
-        return ResponseEntity.ok(registeredUser);
     }
 
     @GetMapping
@@ -56,10 +48,5 @@ public class UserController {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException e) {
         return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-    }
-
-    @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handleUserAlreadyExistsException(UserAlreadyExistsException e) {
-        return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
     }
 } 

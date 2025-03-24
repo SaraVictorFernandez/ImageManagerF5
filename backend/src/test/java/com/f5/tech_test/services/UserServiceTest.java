@@ -1,7 +1,7 @@
 package com.f5.tech_test.services;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.dto.RegisterUserDTO;
+import com.f5.tech_test.dto.RegisterRequest;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
@@ -45,7 +45,7 @@ class UserServiceTest {
 
     private User testUser;
     private UserDTO testUserDTO;
-    private RegisterUserDTO testRegisterUserDTO;
+    private RegisterRequest testRegisterRequest;
     private static final LocalDateTime NOW = LocalDateTime.now();
     private static final String ENCODED_PASSWORD = "encodedPassword123";
 
@@ -64,10 +64,10 @@ class UserServiceTest {
         testUserDTO.setUsername("testuser");
         testUserDTO.setEmail("test@example.com");
 
-        testRegisterUserDTO = new RegisterUserDTO();
-        testRegisterUserDTO.setUsername("testuser");
-        testRegisterUserDTO.setEmail("test@example.com");
-        testRegisterUserDTO.setPassword("password123");
+        testRegisterRequest = new RegisterRequest();
+        testRegisterRequest.setUsername("testuser");
+        testRegisterRequest.setEmail("test@example.com");
+        testRegisterRequest.setPassword("password123");
 
         when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_PASSWORD);
     }
@@ -77,22 +77,22 @@ class UserServiceTest {
         // Arrange
         when(userRepository.existsByUsername(anyString())).thenReturn(false);
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(userMapper.toEntity(any(RegisterUserDTO.class))).thenReturn(testUser);
+        when(userMapper.toEntity(any(RegisterRequest.class))).thenReturn(testUser);
         when(userRepository.save(any(User.class))).thenReturn(testUser);
         when(userMapper.toDTO(any(User.class))).thenReturn(testUserDTO);
 
         // Act
-        UserDTO result = userService.registerUser(testRegisterUserDTO);
+        UserDTO result = userService.registerUser(testRegisterRequest);
 
         // Assert
         assertNotNull(result);
         assertEquals(testUserDTO.getId(), result.getId());
         assertEquals(testUserDTO.getUsername(), result.getUsername());
         assertEquals(testUserDTO.getEmail(), result.getEmail());
-        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
-        verify(userRepository).existsByEmail(testRegisterUserDTO.getEmail());
-        verify(passwordEncoder).encode(testRegisterUserDTO.getPassword());
-        verify(userMapper).toEntity(testRegisterUserDTO);
+        verify(userRepository).existsByUsername(testRegisterRequest.getUsername());
+        verify(userRepository).existsByEmail(testRegisterRequest.getEmail());
+        verify(passwordEncoder).encode(testRegisterRequest.getPassword());
+        verify(userMapper).toEntity(testRegisterRequest);
         verify(userRepository).save(any(User.class));
         verify(userMapper).toDTO(testUser);
     }
@@ -103,8 +103,8 @@ class UserServiceTest {
         when(userRepository.existsByUsername(anyString())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterUserDTO));
-        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterRequest));
+        verify(userRepository).existsByUsername(testRegisterRequest.getUsername());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -115,9 +115,9 @@ class UserServiceTest {
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterUserDTO));
-        verify(userRepository).existsByUsername(testRegisterUserDTO.getUsername());
-        verify(userRepository).existsByEmail(testRegisterUserDTO.getEmail());
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(testRegisterRequest));
+        verify(userRepository).existsByUsername(testRegisterRequest.getUsername());
+        verify(userRepository).existsByEmail(testRegisterRequest.getEmail());
         verify(userRepository, never()).save(any(User.class));
     }
 

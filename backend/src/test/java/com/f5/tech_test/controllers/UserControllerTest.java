@@ -1,7 +1,7 @@
 package com.f5.tech_test.controllers;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.dto.RegisterUserDTO;
+import com.f5.tech_test.dto.RegisterRequest;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
@@ -57,34 +57,6 @@ class UserControllerTest {
         testUserDTO.setEmail("test@example.com");
     }
 
-    @Test
-    void registerUser_WithValidUser_ShouldReturnUserDTO() throws Exception {
-        // Arrange
-        when(userService.registerUser(any(RegisterUserDTO.class))).thenReturn(testUserDTO);
-
-        // Act & Assert
-        mockMvc.perform(post("/api/users/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testUserDTO.getId()))
-                .andExpect(jsonPath("$.username").value(testUserDTO.getUsername()))
-                .andExpect(jsonPath("$.email").value(testUserDTO.getEmail()));
-    }
-
-    @Test
-    void registerUser_WithExistingUsername_ShouldReturnConflict() throws Exception {
-        // Arrange
-        doThrow(new UserAlreadyExistsException("Username already exists"))
-                .when(userService).registerUser(any(RegisterUserDTO.class));
-
-        // Act & Assert
-        mockMvc.perform(post("/api/users/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\"}"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("Username already exists"));
-    }
 
     @Test
     void getAllUsers_ShouldReturnListOfUserDTOs() throws Exception {

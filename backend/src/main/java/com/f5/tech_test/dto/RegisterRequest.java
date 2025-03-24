@@ -1,10 +1,13 @@
 package com.f5.tech_test.dto;
 
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class RegisterUserDTO {
+public class RegisterRequest {
     @NotBlank
     @Size(min = 3, max = 50)
     private String username;
@@ -40,5 +43,5 @@ public class RegisterUserDTO {
 
     public void setPassword(String password) {
         this.password = password;
-    }
+    }    
 } 

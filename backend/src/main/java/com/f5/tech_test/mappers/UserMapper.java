@@ -1,7 +1,7 @@
 package com.f5.tech_test.mappers;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.dto.RegisterUserDTO;
+import com.f5.tech_test.dto.RegisterRequest;
 import com.f5.tech_test.entities.User;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +34,7 @@ public class UserMapper {
         return user;
     }
 
-    public User toEntity(RegisterUserDTO dto) {
+    public User toEntity(RegisterRequest dto) {
         if (dto == null) {
             return null;
         }

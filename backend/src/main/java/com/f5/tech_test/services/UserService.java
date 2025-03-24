@@ -1,7 +1,7 @@
 package com.f5.tech_test.services;
 
 import com.f5.tech_test.dto.UserDTO;
-import com.f5.tech_test.dto.RegisterUserDTO;
+import com.f5.tech_test.dto.RegisterRequest;
 import com.f5.tech_test.entities.User;
 import com.f5.tech_test.exceptions.UserAlreadyExistsException;
 import com.f5.tech_test.exceptions.UserNotFoundException;
@@ -30,7 +30,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO registerUser(RegisterUserDTO user) {
+    public UserDTO registerUser(RegisterRequest user) {
         // Check if username or email already exists
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
