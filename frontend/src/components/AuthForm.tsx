@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
+import { useNavigate } from 'react-router-dom'
 import './AuthForm.css'
 
 export const AuthForm = () => {
@@ -8,7 +9,14 @@ export const AuthForm = () => {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   
-  const { login, register, isLoading, error, clearError } = useAuthStore()
+  const navigate = useNavigate()
+  const { login, register, isLoading, error, clearError, isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard')
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
